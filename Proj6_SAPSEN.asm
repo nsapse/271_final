@@ -131,6 +131,7 @@ instructionString	BYTE	"Please provide 10 signed decimal numbers", 0
 registerString		BYTE	"Each number needs to be small enough to fit inside a 32 bit register.",0
 resultString		BYTE	"Afterwords a list of the integers, their sum, and their average will be displayed.",0
 requestString		BYTE	"Please enter a signed number: ",0
+enteredString		BYTE	"You Entered: ",0
 
 ; Error Messages
 errorString			BYTE	"Your number was either unsigned, too large, or not a number. Try again", 0
@@ -142,6 +143,7 @@ stringBufferSize	DWORD	SIZEOF stringBuffer
 numBuffer			SDWORD	0
 inputLen			DWORD	1 DUP(0)
 signIndicator		DWORD	1 DUP(0)
+allInputArray		BYTE	10 DUP(0)
 
 ; Memory for Converting the Decimal Data to ASCII
 outputBuffer		BYTE	MAX_LEN DUP(?)	
@@ -407,6 +409,7 @@ WriteVal		PROC
 	push	EBX
 	push	EDI
 	push	ESI
+	push	ECX
 	
 	; Load Data
 	mov		ESI, [ebp + 8]			; Source register is the address of the Integer
@@ -486,6 +489,7 @@ WriteVal		PROC
 	mDisplayString ESI
 	
 	; Restore Registers
+	pop		ECX
 	pop		ESI
 	pop		EDI
 	pop		EBX
@@ -508,6 +512,7 @@ push	offset	authorString
 push	offset	introString
 call	introduction
 
+COMMENT @
 ; ---------------------------------------------------------------------------------
 ;	Calls the ReadVal Procedure to Get a String	
 ; ---------------------------------------------------------------------------------
@@ -531,10 +536,40 @@ push	offset	inputLen
 push	offset	outputBuffer
 push	offset	numBuffer
 call	WriteVal
+@
 
-;call	Crlf
-;mov		EDX, offset outputBuffer
-;call	WriteString
+; The loop requesting ten values
+mov		ECX, 10
+
+_request_ten:
+	push	offset signIndicator
+	push	offset errorString
+	push	offset inputLen
+	push	offset numBuffer
+	push	offset emptyErrorMessage	
+	push	MAX_LEN
+	push	offset stringBuffer
+	push	offset requestString
+	call	ReadVal
+
+	CLD
+	mov		EDI, offset allInputArray
+	mov		EAX, numbuffer
+	STOSB
+	
+	
+
+	call	Crlf
+	mov		EDX, offset enteredString
+	call	writeString
+
+	push	offset	signIndicator
+	push	offset	inputLen
+	push	offset	outputBuffer
+	push	offset	numBuffer
+	call	WriteVal
+	call	Crlf
+	loop	_request_ten
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
