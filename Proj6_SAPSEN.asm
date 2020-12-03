@@ -141,7 +141,7 @@ stringBuffer		BYTE	MAX_LEN DUP(?)
 stringBufferSize	DWORD	SIZEOF stringBuffer
 numBuffer			SDWORD	0
 inputLen			DWORD	1 DUP(0)
-signIndicator		DWORD	0
+signIndicator		DWORD	1 DUP(0)
 
 ; Memory for Converting the Decimal Data to ASCII
 outputBuffer		BYTE	MAX_LEN DUP(?)	
@@ -418,11 +418,29 @@ WriteVal		PROC
 	inc		EDI						; We need one more space for the null terminator
 	STD								; Try going through the array in order.
 
+	
+	; Determine the sign of the number we're dealing with and store a record of it.
+	mov		EAX, [ESI]
+	mov		EBX, 0
+	cmp		EAX, EBX
+	push	EDI
+	mov		EDI, [EBP + 20]		; Push EDI to the stack to save it and move the sign byte address to it.
+	JL		_negative_block
+	MOV		[EDI], EBX			; Set a positive sign byte to be referenced for later
+	jmp     _terminating_byte
+
+	_negative_block:
+		mov		EBX, 1
+		mov		[EDI] , EBX		; Set a negative sign byte to be referenced later
+		neg		EAX
+		mov		[ESI], EAX
 
 	; Add the null terminator byte
-	mov		AL, 0						; Add the null bit to the string we're writing
-	
-	STOSB
+	_terminating_byte:
+		pop		EDI							; To restore EDI to the value before it was pointed to the sign byte
+		mov		AL, 0						; Add the null bit to the string we're writing
+		STOSB
+
 	; Get Dereferenced Data Into EAX for Division
 	_conversion_loop:
 		push	[ESI]
@@ -446,8 +464,11 @@ WriteVal		PROC
 
 	; Check the sign and make sure it is represented	
 	mov     EBX, 0
-	cmp		[ESI], EBX			;Compare the current number to zero to see if it is negative.
-	JL		_add_negative
+	mov		EAX, [EBP + 20]
+	push	[EAX]
+	pop     EAX
+	cmp		EAX, EBX			;Compare the current number to zero to see if it is negative.
+	JNE		_add_negative
 	mov		AL, 43
 	; USE STOSB TO DO THIS
 	STOSB
