@@ -64,7 +64,7 @@ mGetString	MACRO promptString, saveLocation, maxLength, blank_error, input_len
 		mov		EDI, input_len
 		mov		[EDI], EAX
 		pop		EDI
-		call	WriteInt
+		;call	WriteInt
 	
 	; ---------------------------------------------------------------------------------
 	;	Move User's Input to saveLocation. Uses addresses returned by ReadString to 
@@ -456,14 +456,15 @@ WriteVal		PROC
 	mov		AL, 45
 	STOSB
 
+
+	_end:	
 	
-	mov		EDX, [EBP + 12]				; DELETE THIS - TEST LINE
-	call	writeString
+	; print the string we constructed
 
-	mDisplayString [ebp + 12]
-
+	mov		ESI, [EBP + 12]
+	mDisplayString ESI
+	
 	; Restore Registers
-	_end:
 	pop		ESI
 	pop		EDI
 	pop		EBX
@@ -510,9 +511,9 @@ push	offset	outputBuffer
 push	offset	numBuffer
 call	WriteVal
 
-call	Crlf
-mov		EDX, offset outputBuffer
-call	WriteString
+;call	Crlf
+;mov		EDX, offset outputBuffer
+;call	WriteString
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
