@@ -143,7 +143,7 @@ stringBufferSize	DWORD	SIZEOF stringBuffer
 numBuffer			SDWORD	0
 inputLen			DWORD	1 DUP(0)
 signIndicator		DWORD	1 DUP(0)
-allInputArray		BYTE	10 DUP(0)
+allInputArray		DWORD	10 DUP(0)
 
 ; Memory for Converting the Decimal Data to ASCII
 outputBuffer		BYTE	MAX_LEN DUP(?)	
@@ -240,10 +240,12 @@ introduction ENDP
 ReadVal		PROC
 	push	EBP
 	mov		EBP, ESP
+
 	push	EDX	
 	push	EAX
 	push	EBX
 	push	ECX
+	push	EDI
 
 	_get_value:	
 		mGetString		[EBP + 8], [EBP + 12], [EBP + 16], [EBP + 20], [EBP + 28]
@@ -325,6 +327,7 @@ ReadVal		PROC
 
 	; Restoring all used registers
 	_end:
+	pop		EDI
 	pop		ECX
 	pop		EBX
 	pop		EAX	
@@ -376,6 +379,8 @@ ReadVal		PROC
 	mov		ebx, 1
 	mov		[ebp + 36], ebx
 	pop		ebx
+
+
 
 	; Jump back on to process the next character
 	loop	_full_conversion_loop	
@@ -539,7 +544,10 @@ call	WriteVal
 @
 
 ; The loop requesting ten values
+
+; Set the number of times to loop and EDI for the string primitives to use
 mov		ECX, 10
+mov		EDI, offset allInputArray
 
 _request_ten:
 	push	offset signIndicator
@@ -553,9 +561,10 @@ _request_ten:
 	call	ReadVal
 
 	CLD
-	mov		EDI, offset allInputArray
 	mov		EAX, numbuffer
-	STOSB
+	STOSD
+	;mov		[EDI], EAX
+	;add		EDI, 4
 	
 	
 
