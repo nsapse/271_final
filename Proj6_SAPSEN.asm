@@ -114,6 +114,15 @@ mDisplayString	MACRO arrayADR
 	call	writeString
 ENDM
 
+mIncrementBuffer MACRO bufferADR
+	push	ebx
+	push	EDI
+	mov		EDI, [bufferADR]
+	mov		ebx, 1
+	add		[EDI], ebx
+	pop		EDI
+	pop		ebx
+ENDM
 ; (insert constant definitions here)
 
 .data
@@ -142,6 +151,7 @@ stringBuffer		BYTE	MAX_LEN DUP(?)
 stringBufferSize	DWORD	SIZEOF stringBuffer
 numBuffer			SDWORD	0
 inputLen			DWORD	1 DUP(0)
+numLen				DWORD	0
 signIndicator		DWORD	1 DUP(0)
 allInputArray		DWORD	10 DUP(0)
 arraySumBuffer		SDWORD	0
@@ -401,6 +411,7 @@ ReadVal		ENDP
 ;			[EBP + 8]	-	The address of the decimal value to convert to ASCII
 ;			[EBP + 12]	-	The address of an empty array being used to do the conversion
 ;			[EBP + 16]	-	The Address of the Sign Indicator;
+;			[EBP + 20]	-	The Address of a Buffer to Keep Track of the Length For Reversals
 ; Returns: None
 ; ---------------------------------------------------------------------------------
 WriteVal PROC
@@ -413,16 +424,10 @@ WriteVal PROC
 	push	EBX
 	push	EDI
 	push	ESI
-	;push	ECX
 	
 	; Load Data
 	mov		ESI, [ebp + 8]			; Source register is the address of the Integer
 	mov		EDI, [ebp + 12]			; Destination register is a blank array
-	;mov		ECX, [ebp + 16]			
-	;push	[ECX]
-	;pop		ECX						; Fill ECX with the length of the input
-	;add		EDI, ECX				; Add the length of the number to the destination so we can fill it in reverse
-	;inc		EDI						; We need one more space for the null terminator
 	CLD							    	; Try going through the array in order.
 
 	
@@ -434,15 +439,15 @@ WriteVal PROC
 	mov		EDI, [EBP + 16]		; Push EDI to the stack to save it and move the sign byte address to it.
 	JL		_negative_block
 	MOV		[EDI], EBX			; Set a positive sign byte to be referenced for later
-	pop		EDI							; To restore EDI to the value before it was pointed to the sign byte
+	pop		EDI					; To restore EDI to the value before it was pointed to the sign byte
 	jmp		_conversion_loop
 
 	_negative_block:
 		mov		EBX, 1
 		mov		[EDI] , EBX		; Set a negative sign byte to be referenced later
-		neg		EAX
+		neg		EAX				; Make the actual number negative to be easier to deal with in division algorithm
 		mov		[ESI], EAX
-		pop		EDI							; To restore EDI to the value before it was pointed to the sign byte
+		pop		EDI				; To restore EDI to the value before it was pointed to the sign byte
 		
 
 
@@ -463,6 +468,20 @@ WriteVal PROC
 		STOSB
 		pop		[ESI]					; Replace the source with the current quotient
 
+		; Increment the lenght tracker so we know how many iterations are necessary to reverse the string
+
+		COMMENT @
+		push	ebx
+		push	EDI
+		mov		EDI, [ebp + 20]
+		mov		ebx,0
+		add		[EDI], ebx
+		pop		EDI
+		pop		ebx
+		@
+
+		mIncrementBuffer [ebp + 20]
+
 		;check if the quotient is now zero and we should break the loop or repeat
 		push	EAX
 		mov		EAX, 0	
@@ -472,22 +491,25 @@ WriteVal PROC
 
 	; Check the sign and make sure it is represented	
 	mov     EBX, 0
-	mov		EAX, [EBP + 20]
+	mov		EAX, [EBP + 16]
 	push	[EAX]
 	pop     EAX
 	cmp		EAX, EBX			;Compare the current number to zero to see if it is negative.
 	JNE		_add_negative
 	mov		AL, 43
 	STOSB
+	mIncrementBuffer [ebp + 20]
 	jmp _end
 	_add_negative:
 	mov		AL, 45
 	STOSB
+	mIncrementBuffer [ebp + 20]
 
 	; Add the null terminator byte
 	_terminating_byte:
 		mov		AL, 0						; Add the null bit to the string we're writing
 		STOSB
+		mIncrementBuffer [ebp + 20]			; The string is now one longer when we reverse it.
 		
 	; REVERSE THE STRING WE JUST MADE
 
@@ -499,7 +521,6 @@ WriteVal PROC
 	mDisplayString [EBP + 12]
 	
 	; Restore Registers
-	pop		ECX
 	pop		ESI
 	pop		EDI
 	pop		EBX
@@ -606,8 +627,8 @@ _request_ten:
 
 
 	; Call the output function to print the number found
+	push	offset	numLen					; Different than inputlen, used to reverse
 	push	offset	signIndicator
-	;push	offset	inputLen
 	push	offset	outputBuffer
 	push	offset	numBuffer
 	call	WriteVal
