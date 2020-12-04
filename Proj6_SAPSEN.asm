@@ -399,9 +399,8 @@ ReadVal		ENDP
 ;
 ; Receives: 
 ;			[EBP + 8]	-	The address of the decimal value to convert to ASCII
-;			[EBP + 12]	-	The address of an empty buffer being used to do the conversion
-;			[EBP + 16]	-	The address of the length of the input string
-;			[EBP + 20]	-	The Address of the Sign Indicator;
+;			[EBP + 12]	-	The address of an empty array being used to do the conversion
+;			[EBP + 16]	-	The Address of the Sign Indicator;
 ; Returns: None
 ; ---------------------------------------------------------------------------------
 WriteVal PROC
@@ -414,17 +413,17 @@ WriteVal PROC
 	push	EBX
 	push	EDI
 	push	ESI
-	push	ECX
+	;push	ECX
 	
 	; Load Data
 	mov		ESI, [ebp + 8]			; Source register is the address of the Integer
 	mov		EDI, [ebp + 12]			; Destination register is a blank array
-	mov		ECX, [ebp + 16]			
-	push	[ECX]
-	pop		ECX						; Fill ECX with the length of the input
-	add		EDI, ECX				; Add the length of the number to the destination so we can fill it in reverse
-	inc		EDI						; We need one more space for the null terminator
-	STD								; Try going through the array in order.
+	;mov		ECX, [ebp + 16]			
+	;push	[ECX]
+	;pop		ECX						; Fill ECX with the length of the input
+	;add		EDI, ECX				; Add the length of the number to the destination so we can fill it in reverse
+	;inc		EDI						; We need one more space for the null terminator
+	CLD							    	; Try going through the array in order.
 
 	
 	; Determine the sign of the number we're dealing with and store a record of it.
@@ -432,22 +431,20 @@ WriteVal PROC
 	mov		EBX, 0
 	cmp		EAX, EBX
 	push	EDI
-	mov		EDI, [EBP + 20]		; Push EDI to the stack to save it and move the sign byte address to it.
+	mov		EDI, [EBP + 16]		; Push EDI to the stack to save it and move the sign byte address to it.
 	JL		_negative_block
 	MOV		[EDI], EBX			; Set a positive sign byte to be referenced for later
-	jmp     _terminating_byte
+	pop		EDI							; To restore EDI to the value before it was pointed to the sign byte
+	jmp		_conversion_loop
 
 	_negative_block:
 		mov		EBX, 1
 		mov		[EDI] , EBX		; Set a negative sign byte to be referenced later
 		neg		EAX
 		mov		[ESI], EAX
-
-	; Add the null terminator byte
-	_terminating_byte:
 		pop		EDI							; To restore EDI to the value before it was pointed to the sign byte
-		mov		AL, 0						; Add the null bit to the string we're writing
-		STOSB
+		
+
 
 	; Get Dereferenced Data Into EAX for Division
 	_conversion_loop:
@@ -466,9 +463,12 @@ WriteVal PROC
 		STOSB
 		pop		[ESI]					; Replace the source with the current quotient
 
-	loop	_conversion_loop
-
-	; USE STOSB TO DO THIS
+		;check if the quotient is now zero and we should break the loop or repeat
+		push	EAX
+		mov		EAX, 0	
+		cmp		[ESI], EAX
+		pop		EAX
+		JNE 	_conversion_loop
 
 	; Check the sign and make sure it is represented	
 	mov     EBX, 0
@@ -478,20 +478,25 @@ WriteVal PROC
 	cmp		EAX, EBX			;Compare the current number to zero to see if it is negative.
 	JNE		_add_negative
 	mov		AL, 43
-	; USE STOSB TO DO THIS
 	STOSB
 	jmp _end
 	_add_negative:
 	mov		AL, 45
 	STOSB
 
+	; Add the null terminator byte
+	_terminating_byte:
+		mov		AL, 0						; Add the null bit to the string we're writing
+		STOSB
+		
+	; REVERSE THE STRING WE JUST MADE
 
 	_end:	
 	
 	; print the string we constructed
 
-	mov		ESI, [EBP + 12]
-	mDisplayString ESI
+;	mov		ESI, [EBP + 12]
+	mDisplayString [EBP + 12]
 	
 	; Restore Registers
 	pop		ECX
@@ -502,7 +507,7 @@ WriteVal PROC
 	pop		EAX
 	pop		EBP
 
-	ret		14
+	ret		12
 WriteVal		ENDP
 
 ; ---------------------------------------------------------------------------------
@@ -568,7 +573,9 @@ push	offset	instructionString
 push	offset	authorString
 push	offset	introString
 call	introduction
-mov		EDI, offset allInputArray
+
+; Set the array where values will be stored to EDI
+mov		EDI, offset allInputArray	
 
 _request_ten:
 
@@ -585,7 +592,7 @@ _request_ten:
 	call	ReadVal
 
 
-	; Load the last value found into the buffer of values.
+	; Load the last value found into the array of values.
 
 	CLD
 	mov		EAX, numbuffer
@@ -600,21 +607,24 @@ _request_ten:
 
 	; Call the output function to print the number found
 	push	offset	signIndicator
-	push	offset	inputLen
+	;push	offset	inputLen
 	push	offset	outputBuffer
 	push	offset	numBuffer
 	call	WriteVal
 	call	Crlf
 	loop	_request_ten
+
+	; Print all the inputs entered into the array for the user to see all at once
 	
+	COMMENT @
 	; Call the summing function to print the current sum of the inputs
 	push	offset arraySumBuffer
 	mov		EAX, 10
-	SUB		EAX, ECX				; Ten - the Current Counter = The Current Len of the Array
+	SUB		EAX, ECX				; Ten - the Current Counter = The Current Len of the Array
 	push	EAX
 	push	EDI
 	call	arraySum
-
+	@
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
