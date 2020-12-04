@@ -144,6 +144,7 @@ numBuffer			SDWORD	0
 inputLen			DWORD	1 DUP(0)
 signIndicator		DWORD	1 DUP(0)
 allInputArray		DWORD	10 DUP(0)
+arraySumBuffer		SDWORD	0
 
 ; Memory for Converting the Decimal Data to ASCII
 outputBuffer		BYTE	MAX_LEN DUP(?)	
@@ -180,13 +181,12 @@ introduction PROC
 	push	EDX
 
 	; Prints the Title String
-	mov		EDX, [EBP + 8]
-	call	WriteString
+	mDisplayString [EBP + 8]
 	call	Crlf
 
 	; Prints the Author String
-	mov		EDX, [EBP + 12]
-	call	WriteString
+	;mov		EDX, [EBP + 12]
+	mDisplayString [EBP + 12]
 	call	Crlf
 
 	; Print a nice little buffer before the instructions
@@ -194,12 +194,12 @@ introduction PROC
 	call	Crlf
 
 	; Prints the Instruction Strings
-	mov		EDX, [EBP + 16]
-	call	WriteString
-	mov		EDX, [EBP + 20]
-	call	WriteString
-	mov		EDX, [EBP + 24]
-	call	WriteString
+	;mov		EDX, [EBP + 16]
+	mDisplayString	[EBP+ 16]
+	;mov		EDX, [EBP + 20]
+	mDisplayString	[EBP + 20]
+	;mov		EDX, [EBP + 24]
+	mDisplayString	[EBP + 24]
 
 
 	; Print a nice little buffer before the next block of text 
@@ -404,7 +404,7 @@ ReadVal		ENDP
 ;			[EBP + 20]	-	The Address of the Sign Indicator;
 ; Returns: None
 ; ---------------------------------------------------------------------------------
-WriteVal		PROC
+WriteVal PROC
 	push	EBP
 	mov		EBP, ESP
 	
@@ -504,6 +504,58 @@ WriteVal		PROC
 
 	ret		14
 WriteVal		ENDP
+
+; ---------------------------------------------------------------------------------
+; Name: arraySum
+;
+; Returns the sum of 
+;
+; Preconditions:	The array passed to the procedure is populated with only
+;					codes for valid integers.	
+;
+; Postconditions:	The sum is saved to [EBP + 16]
+;
+; Receives: 
+;			[EBP + 8]	-	The address of the array of inputs
+;			[EBP + 12]  -	The current length of the array. ie the number of loops to run
+;			[EBP + 16]	-	The address of the buffer being used to store the sum
+;
+; Returns: None
+; ---------------------------------------------------------------------------------
+arraySum PROC
+	push	ECX
+	push	ESI
+	push	EDI
+	push	EAX
+
+	; Move all relevant parameters to their homes
+	mov		ECX, [EBP + 12]
+	mov		ESI, [EBP + 8]
+	mov		EDI, [EBP + 16]
+
+	; Load a number into the accumulator
+	STOSD
+	ADD		EDI, EAX			; Add the acummulator to the tally
+
+	pop		EAX
+	pop		EDI
+	pop		ESI
+	pop		ECX
+	ret 12
+arraySum ENDP
+
+; ---------------------------------------------------------------------------------
+; Name: Main
+;
+;
+; Preconditions:		
+;
+; Postconditions:	;
+; Receives: 
+;			
+; Returns: None
+; ---------------------------------------------------------------------------------
+
 main PROC
 
 ; ---------------------------------------------------------------------------------
@@ -516,40 +568,12 @@ push	offset	instructionString
 push	offset	authorString
 push	offset	introString
 call	introduction
-
-COMMENT @
-; ---------------------------------------------------------------------------------
-;	Calls the ReadVal Procedure to Get a String	
-; ---------------------------------------------------------------------------------
-
-push	offset signIndicator
-push	offset errorString
-push	offset inputLen
-push	offset numBuffer
-push	offset emptyErrorMessage	
-push	MAX_LEN
-push	offset stringBuffer
-push	offset requestString
-call	ReadVal
-
-; ---------------------------------------------------------------------------------
-;	Calls the WriteVal Procedure to Print the String	
-; ---------------------------------------------------------------------------------
-
-push	offset	signIndicator
-push	offset	inputLen
-push	offset	outputBuffer
-push	offset	numBuffer
-call	WriteVal
-@
-
-; The loop requesting ten values
-
-; Set the number of times to loop and EDI for the string primitives to use
-mov		ECX, 10
 mov		EDI, offset allInputArray
 
 _request_ten:
+
+	; Call the input function
+
 	push	offset signIndicator
 	push	offset errorString
 	push	offset inputLen
@@ -560,18 +584,21 @@ _request_ten:
 	push	offset requestString
 	call	ReadVal
 
+
+	; Load the last value found into the buffer of values.
+
 	CLD
 	mov		EAX, numbuffer
 	STOSD
-	;mov		[EDI], EAX
-	;add		EDI, 4
 	
 	
-
+	; Print a message to the user prefacing what number they entered
 	call	Crlf
-	mov		EDX, offset enteredString
-	call	writeString
+	mDisplayString offset enteredString
 
+
+
+	; Call the output function to print the number found
 	push	offset	signIndicator
 	push	offset	inputLen
 	push	offset	outputBuffer
@@ -579,6 +606,15 @@ _request_ten:
 	call	WriteVal
 	call	Crlf
 	loop	_request_ten
+	
+	; Call the summing function to print the current sum of the inputs
+	push	offset arraySumBuffer
+	mov		EAX, 10
+	SUB		EAX, ECX				; Ten - the Current Counter = The Current Len of the Array
+	push	EAX
+	push	EDI
+	call	arraySum
+
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
