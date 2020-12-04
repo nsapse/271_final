@@ -159,6 +159,7 @@ arraySumBuffer		SDWORD	0
 ; Memory for Converting the Decimal Data to ASCII
 outputBuffer		BYTE	MAX_LEN DUP(?)	
 outputString		BYTE	MAX_LEN DUP(?)	
+reversalBuffer		BYTE	MAX_LEN DUP(?)	
 
 .code
 
@@ -412,6 +413,7 @@ ReadVal		ENDP
 ;			[EBP + 12]	-	The address of an empty array being used to do the conversion
 ;			[EBP + 16]	-	The Address of the Sign Indicator;
 ;			[EBP + 20]	-	The Address of a Buffer to Keep Track of the Length For Reversals
+;			[EBP + 24]	-	The Address of a Buffer to Use for Reversal
 ; Returns: None
 ; ---------------------------------------------------------------------------------
 WriteVal PROC
@@ -424,6 +426,7 @@ WriteVal PROC
 	push	EBX
 	push	EDI
 	push	ESI
+	push	ECX
 	
 	; Load Data
 	mov		ESI, [ebp + 8]			; Source register is the address of the Integer
@@ -451,6 +454,12 @@ WriteVal PROC
 		
 
 
+	; Add the null terminator byte - do this before we start as we will be reversing the string
+	_terminating_byte:
+		mov		AL, 0						; Add the null bit to the string we're writing
+		STOSB
+		mIncrementBuffer [ebp + 20]			; The string is now one longer when we reverse it.
+		
 	; Get Dereferenced Data Into EAX for Division
 	_conversion_loop:
 		push	[ESI]
@@ -469,17 +478,6 @@ WriteVal PROC
 		pop		[ESI]					; Replace the source with the current quotient
 
 		; Increment the lenght tracker so we know how many iterations are necessary to reverse the string
-
-		COMMENT @
-		push	ebx
-		push	EDI
-		mov		EDI, [ebp + 20]
-		mov		ebx,0
-		add		[EDI], ebx
-		pop		EDI
-		pop		ebx
-		@
-
 		mIncrementBuffer [ebp + 20]
 
 		;check if the quotient is now zero and we should break the loop or repeat
@@ -503,24 +501,39 @@ WriteVal PROC
 	_add_negative:
 	mov		AL, 45
 	STOSB
-	mIncrementBuffer [ebp + 20]
 
-	; Add the null terminator byte
-	_terminating_byte:
-		mov		AL, 0						; Add the null bit to the string we're writing
-		STOSB
-		mIncrementBuffer [ebp + 20]			; The string is now one longer when we reverse it.
 		
 	; REVERSE THE STRING WE JUST MADE
 
+	;Setup registers for string primitives
+	mov		ECX, [EBP + 20]				; Move the string length we just tracked to the counter
+	mov		EDI, [EBP + 24]
+	mov		ESI, [EBP + 12]
+
+	; get the length of the string and multiply it by four to account for DWORD values
+	push	[ECX]
+	pop		ECX
+	mov		EAX, ECX
+	
+	; Add the offset so that we begin at the end of the string and can move in reverse
+	ADD     ESI, ECX					
+
+	_reversal_loop:
+	STD
+	LODSB
+	CLD
+	STOSB
+	loop _reversal_loop
+
+	xor	ECX, ECX			; Clear ECX for good measure before moving forward
+
 	_end:	
 	
-	; print the string we constructed
-
-;	mov		ESI, [EBP + 12]
-	mDisplayString [EBP + 12]
+	; print the string we constructed and reversed
+	mDisplayString [EBP + 24]
 	
 	; Restore Registers
+	pop		ECX
 	pop		ESI
 	pop		EDI
 	pop		EBX
@@ -627,6 +640,7 @@ _request_ten:
 
 
 	; Call the output function to print the number found
+	push	offset	reversalBuffer
 	push	offset	numLen					; Different than inputlen, used to reverse
 	push	offset	signIndicator
 	push	offset	outputBuffer
