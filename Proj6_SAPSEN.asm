@@ -123,6 +123,22 @@ mIncrementBuffer MACRO bufferADR
 	pop		EDI
 	pop		ebx
 ENDM
+
+mClearArray MACRO arrayADR, arraySize
+	push ecx
+	push eax
+	push edi
+
+	xor  EAX, EAX
+	mov	 ECX, arraySize
+	mov	 EDI, arrayADR
+	CLD
+	rep  stosb
+
+	pop  edi
+	pop  eax
+	pop  ecx
+ENDM
 ; (insert constant definitions here)
 
 .data
@@ -452,13 +468,12 @@ WriteVal PROC
 		mov		[ESI], EAX
 		pop		EDI				; To restore EDI to the value before it was pointed to the sign byte
 		
-
-
 	; Add the null terminator byte - do this before we start as we will be reversing the string
 	_terminating_byte:
 		mov		AL, 0						; Add the null bit to the string we're writing
 		STOSB
-		mIncrementBuffer [ebp + 20]			; The string is now one longer when we reverse it.
+		;mIncrementBuffer [ebp + 20]			; The string is now one longer when we reverse it.
+
 		
 	; Get Dereferenced Data Into EAX for Division
 	_conversion_loop:
@@ -501,6 +516,7 @@ WriteVal PROC
 	_add_negative:
 	mov		AL, 45
 	STOSB
+	mIncrementBuffer [ebp + 20]
 
 		
 	; REVERSE THE STRING WE JUST MADE
@@ -510,10 +526,9 @@ WriteVal PROC
 	mov		EDI, [EBP + 24]
 	mov		ESI, [EBP + 12]
 
-	; get the length of the string and multiply it by four to account for DWORD values
+	; set up ecx for the loops
 	push	[ECX]
 	pop		ECX
-	mov		EAX, ECX
 	
 	; Add the offset so that we begin at the end of the string and can move in reverse
 	ADD     ESI, ECX					
@@ -525,13 +540,20 @@ WriteVal PROC
 	STOSB
 	loop _reversal_loop
 
-	xor	ECX, ECX			; Clear ECX for good measure before moving forward
-
+		
+	
 	_end:	
 	
 	; print the string we constructed and reversed
 	mDisplayString [EBP + 24]
-	
+
+	; Clear everything out before the next loop - mostly just for good measure
+	mov		EBX, 0
+	mov		EDI, [EBP + 20]
+	mov		[EDI], EBX
+	mClearArray	[EBP + 24], 10
+	mClearArray	[EBP + 12], 10
+
 	; Restore Registers
 	pop		ECX
 	pop		ESI
