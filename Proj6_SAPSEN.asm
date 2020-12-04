@@ -459,7 +459,7 @@ WriteVal PROC
 	JL		_negative_block
 	MOV		[EDI], EBX			; Set a positive sign byte to be referenced for later
 	pop		EDI					; To restore EDI to the value before it was pointed to the sign byte
-	jmp		_conversion_loop
+	jmp		_terminating_byte
 
 	_negative_block:
 		mov		EBX, 1
@@ -472,7 +472,6 @@ WriteVal PROC
 	_terminating_byte:
 		mov		AL, 0						; Add the null bit to the string we're writing
 		STOSB
-		;mIncrementBuffer [ebp + 20]			; The string is now one longer when we reverse it.
 
 		
 	; Get Dereferenced Data Into EAX for Division
@@ -512,7 +511,7 @@ WriteVal PROC
 	mov		AL, 43
 	STOSB
 	mIncrementBuffer [ebp + 20]
-	jmp _end
+	jmp _reverse_string
 	_add_negative:
 	mov		AL, 45
 	STOSB
@@ -520,7 +519,7 @@ WriteVal PROC
 
 		
 	; REVERSE THE STRING WE JUST MADE
-
+	_reverse_string:
 	;Setup registers for string primitives
 	mov		ECX, [EBP + 20]				; Move the string length we just tracked to the counter
 	mov		EDI, [EBP + 24]
