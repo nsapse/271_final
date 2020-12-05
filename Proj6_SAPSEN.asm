@@ -738,6 +738,15 @@ call	arraySum
 call	Crlf
 mDisplayString	offset sumString
 
+
+mov		ESI, offset arraySumBuffer
+; Hack to fix the array clearing problem
+push	EAX
+mov		EDI, offset printArray
+mov		EAX, [ESI]				
+mov		[EDI], EAX			
+POP		EAX
+
 ; Call WriteVal to display the sum
 push	offset	reversalBuffer
 push	offset	numLen				
