@@ -137,7 +137,6 @@ mClearArray MACRO arrayADR, arraySize
 	pop  eax
 	pop  ecx
 ENDM
-; (insert constant definitions here)
 
 .data
 
@@ -157,12 +156,13 @@ requestString		BYTE	"Please enter a signed number: ",0
 enteredString		BYTE	"You Entered: ",0
 allEnteredString	BYTE	"All The Numbered Entered Are: ",0
 sumString			BYTE	"The Sum Of The Numbers Entered Is: ",0
+avgString			BYTE	"The Average Of The Numbers Entered Is: ",0
 
 ; Error Messages
 errorString			BYTE	"Your number was either unsigned, too large, or not a number. Try again", 0
 emptyErrorMessage	BYTE	"You did not enter anything. ", 0
 
-; Memory to Save Digits as ASCII String/Convert ASCII to Digits
+; Memory to Save Digits as ASCII String/Convert ASCII to Digits/Do Math
 stringBuffer		BYTE	MAX_LEN DUP(?)	
 stringBufferSize	DWORD	SIZEOF stringBuffer
 numBuffer			SDWORD	0
@@ -171,6 +171,7 @@ numLen				DWORD	0
 signIndicator		DWORD	1 DUP(0)
 allInputArray		SDWORD	10 DUP(0)
 arraySumBuffer		SDWORD	0
+avgBuffer			SDWORD	0
 
 ;To Hold Values For Printing
 printArray			DWORD	10 DUP(0)
@@ -629,6 +630,53 @@ arraySum PROC
 	ret 8
 arraySum ENDP
 
+
+; ---------------------------------------------------------------------------------
+; Name: calcAvg
+;
+; Calculcates the average of the inputs
+;
+; Preconditions: The inputs have already been entered and summed
+;
+; Postconditions: avgBuffer will contain the average of the inputs
+
+; Receives: 
+;		[ebp + 8]	 - The address of a DWORD buffer containing the sum of the inputs
+;		[ebp + 12]	 - The address of a DWORD buffer to store the average once calculated
+;			
+; Returns: None
+; ---------------------------------------------------------------------------------
+calcAvg PROC
+	push	EBP
+	mov		EBP, ESP
+
+	push	EAX
+	push	EDX
+	push	EBX
+	push	EDI
+	push	ESI
+
+	; Move the sum to the source register and the output to the destination. Move the source to EAX, divide by ten, and move the 
+	; result to the address referenced by the destination register.
+	mov		ESI, [EBP + 8]
+    mov		EDI, [EBP + 12]
+	mov		EAX, [ESI]
+	mov		EBX, 10
+	CDQ
+	IDIV	EBX
+	mov		[EDI], EAX
+
+	pop		ESI
+	pop		EDI
+	pop		EBX
+	pop		EDX
+	pop		EAX
+
+	pop		EBP
+
+	ret 8
+calcAVG	ENDP
+main PROC
 ; ---------------------------------------------------------------------------------
 ; Name: Main
 ;
@@ -640,8 +688,6 @@ arraySum ENDP
 ;			
 ; Returns: None
 ; ---------------------------------------------------------------------------------
-
-main PROC
 
 ; ---------------------------------------------------------------------------------
 ;	prints a nice little into for the user before we get started.
@@ -729,8 +775,10 @@ _print_all_values:
 
 loop	_print_all_values
 	
-	
+;------------------------------------------------------------------------
 ; Call the summing function to print the current sum of the inputs
+;------------------------------------------------------------------------
+
 push	offset arraySumBuffer
 push	offset allInputArray
 call	arraySum
@@ -752,9 +800,31 @@ push	offset	reversalBuffer
 push	offset	numLen				
 push	offset	signIndicator
 push	offset	outputBuffer
-push	offset	arraySumBuffer						; EDI is the address of the number to print due to the fuckery above
+push	EDI							; EDI is the address of the number to print due to the fuckery above
 call	WriteVal
-	
+call	Crlf
+
+;------------------------------------------------------------------------
+;	Call the Average Function to Determine the Average Of the Array
+;------------------------------------------------------------------------
+
+push  offset avgBuffer	
+push  offset arraySumBuffer
+call  calcAvg
+
+;------------------------------------------------------------------------
+;	Call WriteVal to print the average we found
+;------------------------------------------------------------------------
+
+mDisplayString offset avgString
+
+push	offset	reversalBuffer
+push	offset	numLen				
+push	offset	signIndicator
+push	offset	outputBuffer
+push	offset  avgBuffer							; EDI is the address of the number to print due to the fuckery above
+call	WriteVal
+
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
 
