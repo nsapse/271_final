@@ -172,10 +172,15 @@ signIndicator		DWORD	1 DUP(0)
 allInputArray		DWORD	10 DUP(0)
 arraySumBuffer		SDWORD	0
 
+;To Hold Values For Printing
+printArray			DWORD	10 DUP(0)
+
 ; Memory for Converting the Decimal Data to ASCII
 outputBuffer		BYTE	MAX_LEN DUP(?)	
 outputString		BYTE	MAX_LEN DUP(?)	
 reversalBuffer		BYTE	MAX_LEN DUP(?)	
+
+
 
 .code
 
@@ -546,11 +551,11 @@ WriteVal PROC
 	; print the string we constructed and reversed
 	mDisplayString [EBP + 24]
 
-	; Clear everything out before the next loop - mostly just for good measure
+	; Clear everything out before the next loop
 	mov		EBX, 0
 	mov		EDI, [EBP + 20]
 	mov		[EDI], EBX
-	mClearArray	[EBP + 24], 10
+ 	mClearArray	[EBP + 24], 10
 	mClearArray	[EBP + 12], 10
 
 	; Restore Registers
@@ -632,6 +637,9 @@ call	introduction
 ; Set the array where values will be stored to EDI
 mov		EDI, offset allInputArray	
 
+; Set the number of loops to ten
+mov		ECX, 10
+
 _request_ten:
 
 	; Call the input function
@@ -655,10 +663,8 @@ _request_ten:
 	
 	
 	; Print a message to the user prefacing what number they entered
-	call	Crlf
-	mDisplayString offset enteredString
-
-
+	;call	Crlf
+	;mDisplayString offset enteredString
 
 	; Call the output function to print the number found
 	push	offset	reversalBuffer
@@ -668,15 +674,47 @@ _request_ten:
 	push	offset	numBuffer
 	call	WriteVal
 	call	Crlf
-	loop	_request_ten
 
-	; Print all the inputs entered into the array for the user to see all at once
+loop	_request_ten
+
+; Print all the inputs entered into the array for the user to see all at once
+
+; reset the counter and print a message to the user
+mov		ECX, 10			
+mDisplayString	offset enteredString
+mov		ESI, offset allInputArray
+
+_print_all_values:
+	
+	push	EDI
+	push	EAX
+	
+	; Hack to fix the array clearing problem
+	mov		EDI, offset printArray		; Make EDI point towards the print buffer
+	mov		EAX, [ESI]					; Put the value ESI is pointing in EAX as a holder (to prevent memory to memory transfer)
+	mov		[EDI], EAX					; Move the value of ESI into the print-buffer via EAX
+	POP		EAX
+
+	; Call WriteVal to display 
+	push	offset	reversalBuffer
+	push	offset	numLen				
+	push	offset	signIndicator
+	push	offset	outputBuffer
+	push	EDI						; EDI is the address of the number to print due to the fuckery above
+	call	WriteVal
+
+	POP		EDI
+
+	add		ESI, 4					; Increment ESI to look towards the next value
+
+loop	_print_all_values
+	
 	
 	COMMENT @
 	; Call the summing function to print the current sum of the inputs
 	push	offset arraySumBuffer
 	mov		EAX, 10
-	SUB		EAX, ECX				; Ten - the Current Counter = The Current Len of the Array
+	SUB		EAX, ECX				; Ten - the Current Counter = The Current Len of the Array
 	push	EAX
 	push	EDI
 	call	arraySum
