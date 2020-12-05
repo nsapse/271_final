@@ -374,8 +374,20 @@ ReadVal		PROC
 	;-------------------------------------------------------------------------
 
 	_improper_input:
-	mov		EDX, [EBP + 32]
-	call	writeString
+	mDisplayString [EBP + 32]
+	mClearArray [EBP + 12], 11		; Clear the string buffer
+
+	; Clear out the location holding the current total.
+	push	EDI
+	push	EAX
+	
+	mov		EDI, [EBP + 24]
+	mov		EAX, 0
+	mov		[EDI], EAX
+	
+	pop		EAX
+	pop		EDI
+
 	call	Crlf
 	JMP		_get_value
 
@@ -391,8 +403,9 @@ ReadVal		PROC
 	; If the symbol isn't the first character the input was improper, let the user know
 	JNE		_improper_input
 
-	; Jump back on to process the next character
-	loop	_full_conversion_loop	
+	; Jump back on to process the next character - too big of a jump for LOOP
+	dec		ECX
+	JNZ		_full_conversion_loop	
 
 	_negative_block:
 
@@ -414,8 +427,9 @@ ReadVal		PROC
 
 
 
-	; Jump back on to process the next character
-	loop	_full_conversion_loop	
+	; Jump back on to process the next character - Cannot be Loop as Greater than 128 Bytes
+	DEC	ECX
+	JNZ	_full_conversion_loop	
 
 ReadVal		ENDP
 
@@ -544,8 +558,7 @@ WriteVal PROC
 	STOSB
 	loop _reversal_loop
 
-		
-	
+	; Lastly add a space, for ease of reading
 	_end:	
 	
 	; print the string we constructed and reversed
