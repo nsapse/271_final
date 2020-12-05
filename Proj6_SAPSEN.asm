@@ -64,7 +64,6 @@ mGetString	MACRO promptString, saveLocation, maxLength, blank_error, input_len
 		mov		EDI, input_len
 		mov		[EDI], EAX
 		pop		EDI
-		;call	WriteInt
 	
 	; ---------------------------------------------------------------------------------
 	;	Move User's Input to saveLocation. Uses addresses returned by ReadString to 
@@ -82,8 +81,7 @@ mGetString	MACRO promptString, saveLocation, maxLength, blank_error, input_len
 
 	; _display an error if the number entered was too low (blank)
 	_display_error:
-		mov		EDX, blank_error
-		call	writeString
+		mDisplayString blank_error
 		jmp		_prompt_user
 
 	; Restore Registers
@@ -356,7 +354,6 @@ ReadVal		PROC
 		neg		EAX
 		mov		[EDI], EAX
 
-
 	; Restoring all used registers
 	_end:
 	pop		EDI
@@ -560,6 +557,8 @@ WriteVal PROC
 
 	; Lastly add a space, for ease of reading
 	_end:	
+	mov		AL, 32
+	STOSB
 	
 	; print the string we constructed and reversed
 	mDisplayString [EBP + 24]
@@ -676,8 +675,8 @@ _request_ten:
 	
 	
 	; Print a message to the user prefacing what number they entered
-	;call	Crlf
-	;mDisplayString offset enteredString
+	call	Crlf
+	mDisplayString offset enteredString
 
 	; Call the output function to print the number found
 	push	offset	reversalBuffer
