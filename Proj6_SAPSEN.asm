@@ -155,6 +155,8 @@ registerString		BYTE	"Each number needs to be small enough to fit inside a 32 bi
 resultString		BYTE	"Afterwords a list of the integers, their sum, and their average will be displayed.",0
 requestString		BYTE	"Please enter a signed number: ",0
 enteredString		BYTE	"You Entered: ",0
+allEnteredString	BYTE	"All The Numbered Entered Are: ",0
+sumString			BYTE	"The Sum Of The Numbers Entered Is: ",0
 
 ; Error Messages
 errorString			BYTE	"Your number was either unsigned, too large, or not a number. Try again", 0
@@ -167,7 +169,7 @@ numBuffer			SDWORD	0
 inputLen			DWORD	1 DUP(0)
 numLen				DWORD	0
 signIndicator		DWORD	1 DUP(0)
-allInputArray		DWORD	10 DUP(0)
+allInputArray		SDWORD	10 DUP(0)
 arraySumBuffer		SDWORD	0
 
 ;To Hold Values For Printing
@@ -594,31 +596,37 @@ WriteVal		ENDP
 ;
 ; Receives: 
 ;			[EBP + 8]	-	The address of the array of inputs
-;			[EBP + 12]  -	The current length of the array. ie the number of loops to run
-;			[EBP + 16]	-	The address of the buffer being used to store the sum
+;			[EBP + 12]	-	The address of the buffer being used to store the sum
 ;
 ; Returns: None
 ; ---------------------------------------------------------------------------------
 arraySum PROC
+	push	EBP
+	mov		EBP, ESP
+
 	push	ECX
 	push	ESI
 	push	EDI
 	push	EAX
 
 	; Move all relevant parameters to their homes
-	mov		ECX, [EBP + 12]
+	mov		ECX, 10
 	mov		ESI, [EBP + 8]
-	mov		EDI, [EBP + 16]
+	mov		EDI, [EBP + 12]
 
 	; Load a number into the accumulator
-	STOSD
-	ADD		EDI, EAX			; Add the acummulator to the tally
+	_tally_loop:
+	LODSD
+	ADD		[EDI], EAX			; Add the acummulator to the tally
+	loop _tally_loop
 
 	pop		EAX
 	pop		EDI
 	pop		ESI
 	pop		ECX
-	ret 12
+
+	pop		EBP
+	ret 8
 arraySum ENDP
 
 ; ---------------------------------------------------------------------------------
@@ -693,7 +701,7 @@ loop	_request_ten
 
 ; reset the counter and print a message to the user
 mov		ECX, 10			
-mDisplayString	offset enteredString
+mDisplayString	offset allEnteredString
 mov		ESI, offset allInputArray
 
 _print_all_values:
@@ -707,7 +715,7 @@ _print_all_values:
 	mov		[EDI], EAX					; Move the value of ESI into the print-buffer via EAX
 	POP		EAX
 
-	; Call WriteVal to display 
+	; Call WVriteVal to display 
 	push	offset	reversalBuffer
 	push	offset	numLen				
 	push	offset	signIndicator
@@ -722,16 +730,22 @@ _print_all_values:
 loop	_print_all_values
 	
 	
-	COMMENT @
-	; Call the summing function to print the current sum of the inputs
-	push	offset arraySumBuffer
-	mov		EAX, 10
-	SUB		EAX, ECX				; Ten - the Current Counter = The Current Len of the Array
-	push	EAX
-	push	EDI
-	call	arraySum
-	@
+; Call the summing function to print the current sum of the inputs
+push	offset arraySumBuffer
+push	offset allInputArray
+call	arraySum
 
+call	Crlf
+mDisplayString	offset sumString
+
+; Call WriteVal to display the sum
+push	offset	reversalBuffer
+push	offset	numLen				
+push	offset	signIndicator
+push	offset	outputBuffer
+push	offset	arraySumBuffer						; EDI is the address of the number to print due to the fuckery above
+call	WriteVal
+	
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
 
