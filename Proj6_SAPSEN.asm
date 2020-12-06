@@ -1,7 +1,7 @@
 TITLE Project 6     (Proj6_SAPSEN.asm)
 
 ; Author: Noah Sapse
-; Last Modified: 11/26/20
+; Last Modified: 12/06/20
 ; OSU email address:sapsen@oregonstate.edu
 ; Course number/section:   CS271 Section 400
 ; Project Number: 6                Due Date: 12/6/20
@@ -111,6 +111,18 @@ mDisplayString	MACRO arrayADR
 	mov		EDX, arrayADR
 	call	writeString
 ENDM
+;---------------------------------------------------------------------------------
+; Name: mIncrementBuffer
+;
+; Increments the value of a buffer .
+;
+; Preconditions: An value pointed at is incremented by one.
+;
+; Receives:
+;			arrayAdr = The Address of the Buffer of Numberical data to increment.
+;
+; returns:  None
+; ---------------------------------------------------------------------------------
 
 mIncrementBuffer MACRO bufferADR
 	push	ebx
@@ -122,6 +134,19 @@ mIncrementBuffer MACRO bufferADR
 	pop		ebx
 ENDM
 
+;---------------------------------------------------------------------------------
+; Name: mClearArray
+;
+; Clears an array of its values setting all entries to zero.
+;
+; Preconditions: The array being pointed to exists
+;
+; Receives:
+;			arrayAdr = The Address of the array to clear.
+;			arraySize = The size of the array to clear (or the amount of it to clear)
+;
+; returns:  None
+; ---------------------------------------------------------------------------------
 mClearArray MACRO arrayADR, arraySize
 	push ecx
 	push eax
@@ -229,9 +254,7 @@ introduction PROC
 	; Prints the Instruction Strings
 	;mov		EDX, [EBP + 16]
 	mDisplayString	[EBP+ 16]
-	;mov		EDX, [EBP + 20]
 	mDisplayString	[EBP + 20]
-	;mov		EDX, [EBP + 24]
 	mDisplayString	[EBP + 24]
 
 
@@ -341,6 +364,16 @@ ReadVal		PROC
 				; Add the current digit to the multiplied buffer
 				pop		EDX
 				add		EAX, EDX
+
+				; Check that the addition didn't trigger an overflow (too large, improper input) before 
+				; saving to the destination buffer
+				push	EBX
+				push	EAX
+				mov		EBX, 1
+				MUL		EAX
+				pop		EAX
+				pop		EBX
+				JO		_improper_input
 				mov		[EDI], EAX
 
 		;loop back until you reach the end of the input string
@@ -370,7 +403,8 @@ ReadVal		PROC
 
 
 	; ---------------------------------------------------------------------------------
-	;	If the user entered an improper input print a message and jump back to the prompt
+	;	If the user entered an improper input print a message, clear the arrays,
+	;   and jump back to the prompt to get a new value
 	;-------------------------------------------------------------------------
 
 	_improper_input:
@@ -639,7 +673,7 @@ arraySum ENDP
 ; Preconditions: The inputs have already been entered and summed
 ;
 ; Postconditions: avgBuffer will contain the average of the inputs
-
+;
 ; Receives: 
 ;		[ebp + 8]	 - The address of a DWORD buffer containing the sum of the inputs
 ;		[ebp + 12]	 - The address of a DWORD buffer to store the average once calculated
