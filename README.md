@@ -1,3 +1,5 @@
+![Project_Example](./example.gif "an example of the code running)
+
 This project is an low level implementation of basic terminal i/o using MASM x86 assembly. The basic idea is that it:
 
 1. Implements macros that get and display a string to the user prompting them to enter ten digits.
