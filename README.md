@@ -1,4 +1,4 @@
-![Project_Example](./example.gif "an example of the code running)
+![Project_Example](./example.gif "an example of the code running")
 
 This project is an low level implementation of basic terminal i/o using MASM x86 assembly. The basic idea is that it:
 
