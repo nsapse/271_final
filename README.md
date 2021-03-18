@@ -6,3 +6,5 @@ This project is an low level implementation of basic terminal i/o using MASM x86
 4. Does basic arithmetic with hte integer data to calculate their sum and average.
 5. Convertsnverts the integers into a string of ascii digits for display; and,
 6. Displays the character strings representing the integers, their sum, and their average.
+
+The project was originally completed as my final portfolio project for CS-271 - Architecture and Assembly at Oregon State University
